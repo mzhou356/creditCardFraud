@@ -24,6 +24,27 @@ def plot_relationship(df, label, feature_name):
     plt.ylabel("count (log)")
     plt.show()
     
+def plot_loss(history):
+    """
+    This function plots the mse value for train and test autoencoder model 
+    
+    Arg:
+    history: a tensorflow.python.keras.callbacks.History object 
+    
+    Returns:
+    A plot that shows 2 overlapping loss versus epoch images. red is for test and blue is for train 
+    
+    """
+    history = history.history
+    plt.plot(history["loss"], color="blue", label="train")
+    plt.plot(history["val_loss"], color="red", label="test")
+    plt.xlabel("epoch")
+    plt.ylabel("mse")
+    plt.title("model training results")
+    plt.legend(loc="best")
+    plt.show()   
+    
+    
 # def log_scale_comparision(df,label,feature_name,show_original=False):
 #     """
 #     This function plots the feature space distribution between np.log scale and no log scale 
