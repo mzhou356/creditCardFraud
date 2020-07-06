@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.metrics import confusion_matrix, classification_report, roc_curve, roc_auc_score
+from sklearn.model_selection import train_test_split
 import tensorflow_probability as tfp
 import tensorflow.compat.v2 as tf
 
@@ -154,6 +155,32 @@ def model_results(label,neg_log,threshold):
     results["pred_class"]=results.neg_log_prob.apply(lambda x: 1 if x>threshold else 0)
     print(confusion_matrix(results.label,results.pred_class))
     print(classification_report(results.label, results.pred_class))
+    
+    
+def train_test_dfs(train,dev,test,label,test_size,seed):
+    """
+    This function splits data into train normal and test X and test y for model_results.
+    
+    Args:
+    train, dev, test: pandas dataframe, training data 
+    label: a string, column name for the label 
+    test_size: a float, ratio of data for test 
+    seed: an integer, random seed for splitting 
+    
+    Returns:
+    training: a pandas df for training
+    norm_data: a pandas df for normal returns only for training 
+    test_data: a pandas df for testing features
+    test_y: a pandas Series, label for test data 
+    """
+    train[label], dev[label] = 0, 0 
+    data = pd.concat([train,dev,test])
+    training, testing = train_test_split(data, test_size = test_size, random_state=seed)
+    test_data,test_y = testing.drop(label,axis=1), testing.Class
+    norm_data, training_data = training[training[label]==0], training
+    norm_data = norm_data.drop(label, axis=1)
+    return training_data,norm_data,test_data,test_y
+    
     
     
 # def log_scale_comparision(df,label,feature_name,show_original=False):
