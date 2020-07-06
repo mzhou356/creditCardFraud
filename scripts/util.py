@@ -44,11 +44,13 @@ def create_model(input_size,encoded_size):
     return encoder,decoder,VAE
 
 
-def plot_relationship(df, label, feature_name):
+def plot_relationship(norm_data = None, fraud_data = None, df=None, label=None, feature_name=None):
     """
     This function plots the relationship between features and the 2 classes.
     
     Args:
+    norm_data: a list or an array or pandas series, data for normal returns 
+    fraud_data: a list or an array or pandas series, data for fraud returns 
     df: pandas dataframe, the dataframe that contains the dataset. 
     label: a type string, colname of the label 
     feature_name: a type string, colname of the dataset.
@@ -57,12 +59,15 @@ def plot_relationship(df, label, feature_name):
     A plot that shows 2 distribution maps, red is for fraud and green is for non fraud 
     """
     # make sure feature_name is type string 
-    assert type(feature_name) == str and type(label)==str, "label and feature_name need to be type str"
-    plt.hist(df[df[label]==1][feature_name], color = "red", label = "fraud",alpha=1,log=True)
-    plt.hist(df[df[label]==0][feature_name], color = "green", label = "not fraud",alpha = 0.3, log=True)
+    if norm_data and fraud_data:
+        plt.hist(fraud_data, color = "red", label = "fraud",alpha=1, log=True)
+        plt.hist(norm_data, color = "green", label = "not fraud",alpha = 0.5,log=True)
+    else:  
+        plt.hist(df[df[label]==1][feature_name], color = "red", label = "fraud",alpha=1,log=True)
+        plt.hist(df[df[label]==0][feature_name], color = "green", label = "not fraud",alpha = 0.3, log=True)
+    plt.ylabel("count (log)")
     plt.legend(loc="best")
     plt.xlabel(f"{feature_name}")
-    plt.ylabel("count (log)")
     plt.show()
     
 def plot_loss(history):
