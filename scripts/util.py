@@ -45,29 +45,32 @@ def make_custom_score(flip = True, AddCustomScore = False, **kwargs):
             scoring[scr_name]=scr_func
     return scoring
 
-def makeCustomSplits(training, label, n_splits,seed,contamination):
+def makeCustomSplits(training, label, n,seed,ratio):
     """
     This function makes custom train test splits for gridsearch or randomsearchCV for sklearn 
     
     args: 
     training: pandas df, contains training data 
     label: a string, colname for the Class label 
-    n_splits: an integer, how many cross fold splits 
+    n: an integer, how many cross fold splits 
     seed: an integer for random splitting 
-    contamination: anomaly class prevalence level 
+    ratio: anomaly class prevalence level 
     
     returns: 
-    generator that returns custom (train,test) for CV search in sklearn 
+    generator that returns custom (train,test) for CV search in sklearn
+    X_train as numpy array 
+    y_train as numpy array
     """
-    normX,fraudX = training[training.Class==0].drop("Class",axis=1).values,\
-               training[training.Class==1].drop("Class",axis=1).values
-normXSplits = KFold(n_splits=3,shuffle=True,random_state=2016).split(normX)
-X_train = np.concatenate([normX,fraudX],axis=0)
-nX,fX = normX.shape[0],fraudX.shape[0]
-y_train = np.concatenate([np.ones(nX),np.ones(fX)*-1],axis=0)
-# set similar prevalence for testing 
-fTest_ind = np.random.choice(np.arange(nX,fX+nX), size = int((nX//3+fX)*contam), replace=False)
-cvSplits = ((train,np.concatenate([test,fTest_ind],axis=0)) for train, test in normXSplits)
+    normX,fraudX = training[training[label]==0].drop(label,axis=1).values,\
+                   training[training[label]==1].drop(label,axis=1).values
+    normXSplits = KFold(n_splits=n,shuffle=True,random_state=seed).split(normX)
+    X_train = np.concatenate([normX,fraudX],axis=0)
+    nX,fX = normX.shape[0],fraudX.shape[0]
+    y_train = np.concatenate([np.ones(nX),np.ones(fX)*-1],axis=0)
+    # set similar prevalence for testing 
+    fTest_ind = np.random.choice(np.arange(nX,fX+nX), size = int((nX//n+fX)*ratio), replace=False)
+    cvSplits = ((train,np.concatenate([test,fTest_ind],axis=0)) for train, test in normXSplits)
+    return cvSplits,X_train,y_train
 
 
 
