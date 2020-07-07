@@ -72,8 +72,21 @@ def makeCustomSplits(training, label, n,seed,ratio):
     cvSplits = ((train,np.concatenate([test,fTest_ind],axis=0)) for train, test in normXSplits)
     return cvSplits,X_train,y_train
 
-
-
+def CVResultsOutput(CVresults, scorenames):
+    """
+    This function generates custom all evaluation outputs for all parameter combinations
+    
+    args:
+    CVresults: gridsearch or randomsearch results, a dictionary format 
+    scorenames: a list of evaluation metrics scorenames. 
+    
+    returns:
+    pandas df with all hyperparameter and evaluation metrics.
+    """
+    df_output= pd.DataFrame(CVresults["params"])
+    for name in scorenames:
+        df_output[name]=CVresults[f"mean_test_{name}"]
+    return df_output
 
 
 
