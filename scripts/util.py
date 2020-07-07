@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.metrics import confusion_matrix, classification_report, roc_curve, roc_auc_score
-from sklearn.model_selection import train_test_split
+from sklearn.metrics import make_scorer, f1_score, precision_score,recall_score,confusion_matrix
+from sklearn.model_selection import train_test_split, GridSearchCV, KFold
 import tensorflow_probability as tfp
 import tensorflow.compat.v2 as tf
 
@@ -10,6 +11,68 @@ tfk = tf.keras
 tfkl=tf.keras.layers
 tfpl= tfp.layers         # layers for tensor flow probability 
 tfd = tfp.distributions
+
+# define custom scores 
+# multiple y_true and y_pred with -1 in confusion matrix to create the correct orientation for confusion matrix 
+def make_custom_score(flip = True, AddCustomScore = False, **kwargs):
+    """
+    This function makes custom score for sklearn gridSearchCV and other evaluators 
+    
+    args: 
+    flip: boolean, if flip y_true andy_pred with -1 to rotate the confusion matrix 
+    AddCustomScore: boolean, if want to add additional custom score 
+    *kwargs: flexible keyword argument, a dictionary with name as score name and value as make_scorer function 
+    
+    returns: 
+    custom score as a dictionary
+    """
+    if flip:
+        def tp(y_true,y_pred):return confusion_matrix(-y_true,-y_pred)[1,1]
+        def fp(y_true,y_pred):return confusion_matrix(-y_true,-y_pred)[0,1]
+        def fn(y_true,y_pred):return confusion_matrix(-y_true,-y_pred)[1,0]
+    else:
+        def tp(y_true,y_pred):return confusion_matrix(y_true,y_pred)[1,1]
+        def fp(y_true,y_pred):return confusion_matrix(y_true,y_pred)[0,1]
+        def fn(y_true,y_pred):return confusion_matrix(y_true,y_pred)[1,0]
+    def f1_f(y_true,y_pred):return f1_score(y_true,y_pred, pos_label=-1)
+    def prec_f(y_true,y_pred):return precision_score(y_true,y_pred, pos_label=-1)
+    def recall_f(y_true,y_pred):return recall_score(y_true,y_pred, pos_label=-1)
+    scoring = {'tp':make_scorer(tp),'fp':make_scorer(fp),
+           'fn':make_scorer(fn), 'f1_f':make_scorer(f1_f),
+           'prec_f':make_scorer(prec_f),'recall_f':make_scorer(recall_f)}
+    if AddCustomScore:
+        for scr_name,scr_func in kwargs.items():
+            scoring[scr_name]=scr_func
+    return scoring
+
+def makeCustomSplits(training, label, n_splits,seed,contamination):
+    """
+    This function makes custom train test splits for gridsearch or randomsearchCV for sklearn 
+    
+    args: 
+    training: pandas df, contains training data 
+    label: a string, colname for the Class label 
+    n_splits: an integer, how many cross fold splits 
+    seed: an integer for random splitting 
+    contamination: anomaly class prevalence level 
+    
+    returns: 
+    generator that returns custom (train,test) for CV search in sklearn 
+    """
+    normX,fraudX = training[training.Class==0].drop("Class",axis=1).values,\
+               training[training.Class==1].drop("Class",axis=1).values
+normXSplits = KFold(n_splits=3,shuffle=True,random_state=2016).split(normX)
+X_train = np.concatenate([normX,fraudX],axis=0)
+nX,fX = normX.shape[0],fraudX.shape[0]
+y_train = np.concatenate([np.ones(nX),np.ones(fX)*-1],axis=0)
+# set similar prevalence for testing 
+fTest_ind = np.random.choice(np.arange(nX,fX+nX), size = int((nX//3+fX)*contam), replace=False)
+cvSplits = ((train,np.concatenate([test,fTest_ind],axis=0)) for train, test in normXSplits)
+
+
+
+
+
 
 def create_model(input_size,encoded_size):
     """
