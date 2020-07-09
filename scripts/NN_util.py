@@ -46,21 +46,49 @@ def make_tensor_dataset(dfs,buffer_size,batch_size,test_size=None,seed=None, nee
                  dev_set)).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE).shuffle(buffer_size)
     return train_data, dev_data 
 
-def dense_layers(sizes):
+def dense_layers(sizes,l1 = 10e-5):
     """
     This function creates tfk sequantial layers to customize the size of layers 
     
     args:
     sizes: a list of integer indicator hidden layer node number
+    l1: optional term for custum set l1 regularizer for preventing overfitting 
     
     returns:
     tensforflow dense layers sequential layers
     """
-    layers = tfk.Sequential([tfkl.Dense(s,activation=tf.nn_leaky_relu,
-                                        activity_regularizer=tfk.regularizers.l1(10e-5))
+    layers = tfk.Sequential([tfkl.Dense(s,activation=tf.nn.leaky_relu,
+                                        activity_regularizer=tfk.regularizers.l1(l1))
                              for s in sizes])
     return layers
 
+def make_autoencoder(sizes,input_size, l1 = 10e-5, ifvae = False, encoded_size = None,prior=None):
+    if ifvae and encoded_size and prior:
+        encoder = tfk.Sequential([
+                  tfkl.InputLayer(input_shape = input_size), 
+                  dense_layers(sizes,l1),
+                  tfkl.Dense(tfpl.MultivariateNormalTriL.params_size(encoded_size),activation=None),
+                  tfpl.MultivariateNormalTriL(encoded_size,activity_regularizer=tfpl.KLDivergenceRegularizer(prior))
+                  ],name = "encoder")
+        decoder = tfk.Sequential([
+                  tfkl.InputLayer(input_shape=[encoded_size]),
+                  dense_layers(reversed(sizes),l1),
+                  tfkl.Dense(tfpl.IndependentNormal.params_size(input_size),activation=None),
+                  tfpl.IndependentNormal(input_size)
+                  ], name = "decoder")
+        model = tfk.Model(inputs=encoder.inputs, outputs=decoder(encoder.outputs[0]),name="VAE")
+        return model, encoder, decoder 
+    else:
+        encoder = tfk.Sequential([
+                  tfkl.InputLayer(input_shape = input_size), 
+                  dense_layers(sizes,l1)], name = "encoder")
+        decoder = tfk.Sequential(
+                  [tfkl.InputLayer(input_shape=sizes[-1]),
+                  dense_layers(list(reversed(sizes))[1:],l1),
+                  tfkl.Dense(units=input_size, activation=None)], name = "decoder")
+        model = tfk.Model(inputs=encoder.inputs, outputs=decoder(encoder.outputs),name="encoder")
+        return model
+            
 
 def plot_loss(history):
     """
