@@ -131,21 +131,23 @@ def plot_roc(label, neg_log):
     plt.legend(loc="best")
     plt.show()
     
-def model_results(label,neg_log,threshold):
+def model_results(label,prob_score,threshold=None,ifprint=False):
     """
     This function returns confusion matrix and classification report for holdout set. 
     
     Args:
     label:y label for test set 
-    neg_log: - reconstruction_log_prob (this is the term we will use as pred prob score)
-    threshold: a float. The cut off neg log prob score for classification. 
+    prob_score: - prediction_score in anomaly detection cases, a numpy aray
+    threshold: a float. The cut off prob score for binary classification. 
     
     Returns: confusion matrix and classification report for the specified neg log threshold.
     """
-    results = pd.DataFrame({"label":label,"neg_log_prob":neg_log})
-    results["pred_class"]=results.neg_log_prob.apply(lambda x: 1 if x>threshold else 0)
-    print(confusion_matrix(results.label,results.pred_class))
-    print(classification_report(results.label, results.pred_class))
+    results = pd.DataFrame({"label":label,"anomaly_prob":prob_score})
+    if ifprint and threshold:
+        results["pred_class"]=results.anomaly_prob.apply(lambda x: 1 if x>=threshold else 0)
+        print(confusion_matrix(results.label,results.pred_class))
+        print(classification_report(results.label, results.pred_class))
+    return results
     
     
 def train_test_dfs(train,dev,test,label,test_size,seed):
