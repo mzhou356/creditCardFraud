@@ -88,41 +88,6 @@ def CVResultsOutput(CVresults, scorenames):
         df_output[name]=CVresults[f"mean_test_{name}"]
     return df_output
 
-
-
-def create_model(input_size,encoded_size):
-    """
-    This function returns encoder, decoder, and VAE for variational autoencoder.
-    
-    Args:
-    input_size: integer, number of input features. 
-    encoded_size: dimension for the latent representation (Z).
-    
-    Returns:
-    encoder, decoder, and VAE models 
-    """
-    prior = tfd.Independent(tfd.Normal(loc=tf.zeros(encoded_size), scale=1),
-                        reinterpreted_batch_ndims=1)
-    encoder = tfk.Sequential([
-    tfkl.InputLayer(input_shape = input_size),  # 30 input features 
-    tfkl.Dense(units=20, activation=tf.nn.leaky_relu, activity_regularizer=tfk.regularizers.l1(10e-5)),
-    tfkl.Dense(units=10, activation=tf.nn.leaky_relu, activity_regularizer=tfk.regularizers.l1(10e-5)),
-    tfkl.Dense(tfpl.MultivariateNormalTriL.params_size(encoded_size),activation=None),
-    tfpl.MultivariateNormalTriL(encoded_size,activity_regularizer=tfpl.KLDivergenceRegularizer(prior))
-    ], name="encoder")
-    decoder = tfk.Sequential([
-    tfkl.InputLayer(input_shape=[encoded_size]),
-    tfkl.Dense(units=10, activation=tf.nn.leaky_relu, activity_regularizer=tfk.regularizers.l1(10e-5)),
-    tfkl.Dense(units=20, activation=tf.nn.leaky_relu, activity_regularizer=tfk.regularizers.l1(10e-5)),
-    tfkl.Dense(tfpl.IndependentNormal.params_size(input_size),activation=None),
-    tfpl.IndependentNormal(input_size)
-    ], name = "decoder")
-    VAE = tfk.Model(inputs=encoder.inputs, outputs=decoder(encoder.outputs[0]),name="VAE")
-    negloglik = lambda x_input, x_output: -x_output.log_prob(x_input)
-    VAE.compile(optimizer=tf.optimizers.Adam(learning_rate=1e-3), loss=negloglik)
-    return encoder,decoder,VAE
-
-
 def plot_relationship(norm_data = None, fraud_data = None, df=None, label=None, feature_name=None):
     """
     This function plots the relationship between features and the 2 classes.
@@ -149,65 +114,7 @@ def plot_relationship(norm_data = None, fraud_data = None, df=None, label=None, 
     plt.xlabel(f"{feature_name}")
     plt.show()
     
-def plot_loss(history):
-    """
-    This function plots the mse value for train and test autoencoder model 
-    
-    Arg:
-    history: a tensorflow.python.keras.callbacks.History object 
-    
-    Returns:
-    A plot that shows 2 overlapping loss versus epoch images. red is for test and blue is for train 
-    
-    """
-    history = history.history
-    plt.plot(history["loss"], color="blue", label="train")
-    plt.plot(history["val_loss"], color="red", label="test")
-    plt.xlabel("epoch")
-    plt.ylabel("mse")
-    plt.title("model training results")
-    plt.legend(loc="best")
-    plt.show()   
-    
 
-def reconstruction_log_prob(x_input,encoder, decoder,sampling_size=100):
-    """
-    This function generates log_prob score for each input sample with num of sampling_size per
-    input data. 
-    
-    Arg:
-    x_input: numpy array, input features (30 dimension)
-    encoder: deep learning model 
-    decoder: deep learning model 
-    sampling_size: an integer, default is 100. 
-    
-    Returns:
-    Average prob score for log_prob of each input. 
-    """
-    Z = encoder(x_input)
-    encoder_samples = Z.sample(sampling_size)  # generate 30 outputs from encoder per input 
-    return np.mean(decoder(encoder_samples).log_prob(x_input), axis=0)
-
-def neg_log_prob(neg_log,label):
-    """
-    This function plots the neg_log prob for both fraud and normal 
-    classes.
-    
-    Args:
-    neg_log: - reconstruction_log_prob (this is the term we will use as pred prob score)
-    label: y label for test set 
-    
-    Returns: A plot that shows the negative log prob of fraud versus normal 
-    transactions. 
-    """
-    plt.hist(neg_log[label==1],label="fraud",color="red",alpha = 0.5, log=True)
-    plt.hist(neg_log[label==0],label="normal",color="blue",alpha=0.5, log=True)
-    plt.title("reconstruction log prob")
-    plt.ylabel("frequence log")
-    plt.xlabel("logp(x_input|x_output)")
-    plt.show()
-    
-    
 def plot_roc(label, neg_log):
     """
     This function plots the receiver operator curve. 
@@ -224,21 +131,23 @@ def plot_roc(label, neg_log):
     plt.legend(loc="best")
     plt.show()
     
-def model_results(label,neg_log,threshold):
+def model_results(label,prob_score,threshold=None,ifprint=False):
     """
     This function returns confusion matrix and classification report for holdout set. 
     
     Args:
     label:y label for test set 
-    neg_log: - reconstruction_log_prob (this is the term we will use as pred prob score)
-    threshold: a float. The cut off neg log prob score for classification. 
+    prob_score: - prediction_score in anomaly detection cases, a numpy aray
+    threshold: a float. The cut off prob score for binary classification. 
     
     Returns: confusion matrix and classification report for the specified neg log threshold.
     """
-    results = pd.DataFrame({"label":label,"neg_log_prob":neg_log})
-    results["pred_class"]=results.neg_log_prob.apply(lambda x: 1 if x>threshold else 0)
-    print(confusion_matrix(results.label,results.pred_class))
-    print(classification_report(results.label, results.pred_class))
+    results = pd.DataFrame({"label":label,"anomaly_prob":prob_score})
+    if ifprint and threshold:
+        results["pred_class"]=results.anomaly_prob.apply(lambda x: 1 if x>=threshold else 0)
+        print(confusion_matrix(results.label,results.pred_class))
+        print(classification_report(results.label, results.pred_class))
+    return results
     
     
 def train_test_dfs(train,dev,test,label,test_size,seed):
