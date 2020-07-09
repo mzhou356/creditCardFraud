@@ -111,13 +111,15 @@ def plot_loss(history):
     plt.show()   
     
 
-def reconstruction_log_prob(x_input,encoder, decoder,sampling_size=100):
+def reconstruction_log_prob_sampled(X_test,y_test,X_input_sample_size,encoder, decoder,sampling_size=100):
     """
     This function generates log_prob score for each input sample with num of sampling_size per
     input data. 
     
     Arg:
-    x_input: numpy array, input features (30 dimension)
+    x_test: pandas dataframe input features
+    y_test: pandas Series for label
+    X_input_sample_size: an integer, how many datapoints to sample
     encoder: deep learning model 
     decoder: deep learning model 
     sampling_size: an integer, default is 100. 
@@ -125,25 +127,38 @@ def reconstruction_log_prob(x_input,encoder, decoder,sampling_size=100):
     Returns:
     Average prob score for log_prob of each input. 
     """
-    Z = encoder(x_input)
+    ind = X_test.index
+    X_input_ind = np.random.choice(ind,replace=False, size =X_input_sample_size)
+    X_input,y_input = X_test.loc[X_input_ind].values, y_test.loc[X_input_ind]
+    Z = encoder(X_input)
     encoder_samples = Z.sample(sampling_size)  # generate 30 outputs from encoder per input 
-    return np.mean(decoder(encoder_samples).log_prob(x_input), axis=0)
+    mean_score = np.mean(decoder(encoder_samples).log_prob(X_input), axis=0)
+    return mean_score, y_input
 
-# def neg_log_prob(neg_log,label):
-#     """
-#     This function plots the neg_log prob for both fraud and normal 
-#     classes.
+def reconstruction_log_prob(x_input,stepsize,encoder, decoder,sampling_size=100):
+    """
+    This function generates log_prob score for each input sample with num of sampling_size per
+    input data (for all samples incremental ways to allow more sampling size)
     
-#     Args:
-#     neg_log: - reconstruction_log_prob (this is the term we will use as pred prob score)
-#     label: y label for test set 
+    Arg:
+    x_input: numpy array, input features (30 dimension),
+    step_size: incremental size for computing all datapoints 
+    encoder: deep learning model 
+    decoder: deep learning model 
+    sampling_size: an integer, default is 100. 
     
-#     Returns: A plot that shows the negative log prob of fraud versus normal 
-#     transactions. 
-#     """
-#     plt.hist(neg_log[label==1],label="fraud",color="red",alpha = 0.5, log=True)
-#     plt.hist(neg_log[label==0],label="normal",color="blue",alpha=0.5, log=True)
-#     plt.title("reconstruction log prob")
-#     plt.ylabel("frequence log")
-#     plt.xlabel("logp(x_input|x_output)")
-#     plt.show()    
+    Returns:
+    Average prob score for log_prob of each input. 
+    """
+    scores = []
+    for i in range(0,len(x_input)//stepsize):
+        x = x_input[i*stepsize:(i+1)*stepsize]
+        Z = encoder(x)
+        encoder_samples = Z.sample(sampling_size)  # generate 30 outputs from encoder per input 
+        scores.extend(np.mean(decoder(encoder_samples).log_prob(x), axis=0))
+    if (i+1)*stepsize < len(x_input):
+        x = x_input[(i+1)*stepsize:]
+        Z = encoder(x)
+        encoder_samples = Z.sample(sampling_size)  # generate 30 outputs from encoder per input 
+        scores.extend(np.mean(decoder(encoder_samples).log_prob(x), axis=0))
+    return np.array(scores)
