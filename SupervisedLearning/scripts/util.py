@@ -4,13 +4,6 @@ import pandas as pd
 from sklearn.metrics import confusion_matrix, classification_report, roc_curve, roc_auc_score
 from sklearn.metrics import make_scorer, f1_score, precision_score,recall_score,confusion_matrix
 from sklearn.model_selection import train_test_split, GridSearchCV, KFold
-import tensorflow_probability as tfp
-import tensorflow.compat.v2 as tf
-
-tfk = tf.keras
-tfkl=tf.keras.layers
-tfpl= tfp.layers         # layers for tensor flow probability 
-tfd = tfp.distributions
 
 # define custom scores 
 # multiple y_true and y_pred with -1 in confusion matrix to create the correct orientation for confusion matrix 
@@ -166,13 +159,12 @@ def train_test_dfs(train,dev,test,label,test_size,seed):
     test_data: a pandas df for testing features
     test_y: a pandas Series, label for test data 
     """
-    train[label], dev[label] = 0, 0 
-    data = pd.concat([train,dev,test])
+    train_df = train.copy()
+    dev_df = dev.copy()
+    train_df[label], dev_df[label] = 0, 0 
+    data = pd.concat([train_df,dev_df,test])
     training, testing = train_test_split(data, test_size = test_size, random_state=seed)
-    test_data,test_y = testing.drop(label,axis=1), testing.Class
-    norm_data, training_data = training[training[label]==0], training
-    norm_data = norm_data.drop(label, axis=1)
-    return training_data,norm_data,test_data,test_y
+    return training, testing
     
     
     
