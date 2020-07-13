@@ -112,8 +112,8 @@ def plot_metrics(history):
     A plot that shows 2 overlapping loss versus epoch images. red is for test and blue is for train 
     
     """
-    history = history.history
-    del history["loss"]
-    del history["val_loss"]
-    pd.DataFrame(history).plot()
+    result = history.history.copy()
+    del result["loss"]
+    del result["val_loss"]
+    pd.DataFrame(result).plot()
     
