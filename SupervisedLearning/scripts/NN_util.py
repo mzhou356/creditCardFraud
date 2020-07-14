@@ -18,14 +18,13 @@ def set_gpu_limit(n):
     tf.config.experimental.set_virtual_device_configuration(gpus[0],
     [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1024*n)]) 
     
-def make_tensor_dataset(df,label_name,batch_size,buffer_size,test_size,seed):
+def make_tensor_dataset(df,label_name,batch_size,test_size,seed):
     """
     This function generates tensorflow train and test dataset for NN.
     
     args:
     df: a pandas dataframes, used for training and testing.
     label_name: String, name for the label column
-    buffer_size: an integer for each shuffle 
     batch_size: training batch size for each shuffle 
     test_size: a float, percentage of the df for testing during fitting if needsplit is True
     seed: an integer for random shuffling during train test split if needsplit is True 
@@ -37,9 +36,9 @@ def make_tensor_dataset(df,label_name,batch_size,buffer_size,test_size,seed):
     train_set, train_label = train.drop(label_name,axis=1).values, train[label_name].values
     dev_set, dev_label = test.drop(label_name,axis=1).values, test[label_name].values
     train_data = tf.data.Dataset.from_tensor_slices((train_set,
-                 train_label)).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE).shuffle(buffer_size)
+                 train_label)).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE).shuffle(train_label.shape[0])
     dev_data = tf.data.Dataset.from_tensor_slices((dev_set,
-                 dev_label)).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE).shuffle(buffer_size)
+                 dev_label)).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE).shuffle(dev_label.shape[0])
     return train_data, dev_data 
 
 def dense_layers(sizes,l1 = 10e-5):
@@ -115,5 +114,7 @@ def plot_metrics(history):
     result = history.history.copy()
     del result["loss"]
     del result["val_loss"]
-    pd.DataFrame(result).plot()
+    pd.DataFrame(result).plot(logy=True, figsize = (6,6))
+    plt.legend(bbox_to_anchor=(1,1), ncol=2)
+    plt.show()
     
