@@ -7,29 +7,23 @@ from sklearn.model_selection import train_test_split, GridSearchCV, KFold
 
 # define custom scores 
 # multiple y_true and y_pred with -1 in confusion matrix to create the correct orientation for confusion matrix 
-def make_custom_score(flip = True, AddCustomScore = False, **kwargs):
+def make_custom_score(AddCustomScore = False, **kwargs):
     """
     This function makes custom score for sklearn gridSearchCV and other evaluators 
     
     args: 
-    flip: boolean, if flip y_true andy_pred with -1 to rotate the confusion matrix 
     AddCustomScore: boolean, if want to add additional custom score 
     *kwargs: flexible keyword argument, a dictionary with name as score name and value as make_scorer function 
     
     returns: 
     custom score as a dictionary
     """
-    if flip:
-        def tp(y_true,y_pred):return confusion_matrix(-y_true,-y_pred)[1,1]
-        def fp(y_true,y_pred):return confusion_matrix(-y_true,-y_pred)[0,1]
-        def fn(y_true,y_pred):return confusion_matrix(-y_true,-y_pred)[1,0]
-    else:
-        def tp(y_true,y_pred):return confusion_matrix(y_true,y_pred)[1,1]
-        def fp(y_true,y_pred):return confusion_matrix(y_true,y_pred)[0,1]
-        def fn(y_true,y_pred):return confusion_matrix(y_true,y_pred)[1,0]
-    def f1_f(y_true,y_pred):return f1_score(y_true,y_pred, pos_label=-1)
-    def prec_f(y_true,y_pred):return precision_score(y_true,y_pred, pos_label=-1)
-    def recall_f(y_true,y_pred):return recall_score(y_true,y_pred, pos_label=-1)
+    def tp(y_true,y_pred):return confusion_matrix(y_true,y_pred)[1,1]
+    def fp(y_true,y_pred):return confusion_matrix(y_true,y_pred)[0,1]
+    def fn(y_true,y_pred):return confusion_matrix(y_true,y_pred)[1,0]
+    def f1_f(y_true,y_pred):return f1_score(y_true,y_pred, pos_label=1)
+    def prec_f(y_true,y_pred):return precision_score(y_true,y_pred, pos_label=1)
+    def recall_f(y_true,y_pred):return recall_score(y_true,y_pred, pos_label=1)
     scoring = {'tp':make_scorer(tp),'fp':make_scorer(fp),
            'fn':make_scorer(fn), 'f1_f':make_scorer(f1_f),
            'prec_f':make_scorer(prec_f),'recall_f':make_scorer(recall_f)}
