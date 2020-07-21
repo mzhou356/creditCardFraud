@@ -1,9 +1,11 @@
 import matplotlib.pyplot as plt 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import confusion_matrix, classification_report, roc_curve, roc_auc_score
-from sklearn.metrics import make_scorer, f1_score, precision_score,recall_score,confusion_matrix
+from sklearn.metrics import confusion_matrix, classification_report, roc_curve, roc_auc_score, average_precision_score
+from sklearn.metrics import make_scorer, f1_score, precision_score,recall_score,confusion_matrix,precision_recall_curve
 from sklearn.model_selection import train_test_split, GridSearchCV, KFold
+from xgboost import XGBClassifier
+
 
 # define custom scores 
 # multiple y_true and y_pred with -1 in confusion matrix to create the correct orientation for confusion matrix 
@@ -31,6 +33,22 @@ def make_custom_score(AddCustomScore = False, **kwargs):
         for scr_name,scr_func in kwargs.items():
             scoring[scr_name]=scr_func
     return scoring
+
+def plot_pr_re(label, score):
+    """
+    This function plots the receiver operator curve. 
+    
+    Args:
+    label:y label for test set 
+    score: prob_score
+    
+    Returns: precsion recall curve
+    """
+    precision, recall, threshold = precision_recall_curve(label,score)
+    plt.plot(recall,precision)
+    plt.ylabel("precision")
+    plt.xlabel("recall")
+    plt.show()
 
 def makeCustomSplits(training, label, n,seed,ratio):
     """
@@ -101,6 +119,42 @@ def plot_relationship(norm_data = None, fraud_data = None, df=None, label=None, 
     plt.xlabel(f"{feature_name}")
     plt.show()
     
+def customFeatureElimination(train_X,train_y,test_X,test_y,n,max_iter,delta,verbose = True):
+    """
+    This function uses np.random to randomly remove n num of features until the score 
+    no longer improve by a threshold. 
+    
+    train_X: training features, a pandas dataframe. 
+    train_y: label for train, pandas Series or array
+    test_X: test features, a pandas dataframe
+    test_y: label for test, pandas Series or array
+    n: num of features to keep 
+    max_iter: maximum num of trials 
+    verbose: show progress 
+    delta: early stop if not improve after delta iterations 
+    """
+    best_metric = 0.0;  # use precision recall score 
+    features = [];
+    best_iter = max_iter
+    while max_iter > 0:
+        max_iter -=1
+        selected = train_X.sample(n=n,axis=1)
+        current_features = selected.columns 
+        model = XGBClassifier(n_estimators=50, eta = 0.25, max_depth=5).fit(selected, train_y, eval_metric="aucpr")
+        test = test_X[current_features]
+        current_metric = precision_score(test_y,model.predict(test))
+        if current_metric > best_metric:
+            features = current_features
+            best_metric = current_metric 
+            best_iter = max_iter
+        if verbose:
+            print(current_metric)
+            print(best_metric)
+            print(best_iter)
+        if (best_iter-max_iter)>delta:
+            print(f"early stop after {delta} steps!")
+            break
+    return best_metric, features
 
 def plot_roc(label, neg_log):
     """
