@@ -43,6 +43,7 @@ def plot_pr_re(label, score):
     
     Returns: precsion recall curve
     """
+    plt.figure(figsize=(6,6))
     precision, recall, threshold = precision_recall_curve(label,score)
     plt.plot(recall,precision)
     plt.ylabel("precision")
