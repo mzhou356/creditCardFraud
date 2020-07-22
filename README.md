@@ -7,5 +7,9 @@
 * Isolation forest
 * OneClass SVM
 
+### Try out supervised learning method without sampling strategy:
+* Xgboost, [notebook link](https://github.com/mzhou356/creditCardFraud/blob/master/SupervisedLearning/notebooks/Xgboost_binary_classifier.ipynb
+)
+
 ### DataSet:  
 * Dataset is from [kaggle]( https://www.kaggle.com/mlg-ulb/creditcardfraud?select=creditcard.csv)
