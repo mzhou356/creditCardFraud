@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import xgboost
-from xgboost import XGBClassifier
 from sklearn.metrics import confusion_matrix, classification_report, average_precision_score
 from sklearn.metrics import make_scorer, f1_score, precision_score,recall_score,precision_recall_curve
 from sklearn.model_selection import train_test_split, GridSearchCV
@@ -92,11 +91,12 @@ def plot_relationship(norm_data = None, fraud_data = None, df=None, label=None, 
     plt.xlabel(f"{feature_name}")
     plt.show()
     
-def customFeatureElimination(train_X,train_y,test_X,test_y,n,max_iter,delta,verbose = True):
+def customFeatureElimination(estimator,train_X,train_y,test_X,test_y,n,max_iter,delta,verbose = True):
     """
     This function uses np.random to randomly remove n num of features until the score 
     no longer improve by a threshold. 
     
+    estimator: xgboost model 
     train_X: training features, a pandas dataframe. 
     train_y: label for train, pandas Series or array
     test_X: test features, a pandas dataframe
@@ -115,7 +115,7 @@ def customFeatureElimination(train_X,train_y,test_X,test_y,n,max_iter,delta,verb
         max_iter -=1
         selected = train_X.sample(n=n,axis=1,replace=False)
         current_features = selected.columns 
-        model = XGBClassifier(n_estimators=50, eta = 0.25, max_depth=5).fit(selected, train_y, eval_metric="aucpr")
+        model = estimator.fit(selected, train_y, eval_metric="aucpr")
         test = test_X[current_features]
         current_metric = precision_score(test_y,model.predict(test))
         if current_metric > best_metric:
@@ -131,11 +131,12 @@ def customFeatureElimination(train_X,train_y,test_X,test_y,n,max_iter,delta,verb
             break
     return best_metric, features
 
-def FeatureSearch(train_X, train_y,test_X,test_y, max_n,min_n, step_n,max_iter, delta, v1=False,v2=False):
+def FeatureSearch(estimator,train_X, train_y,test_X,test_y, max_n,min_n, step_n,max_iter, delta, v1=False,v2=False):
     """
     This function uses customFeatureElimination to search a set of features from max_n,min_n with stepsize of step_n.
     
     Args:
+    estimator: xgboost model 
     train_X: training features, a pandas dataframe. 
     train_y: label for train, pandas Series or array
     test_X: test features, a pandas dataframe
@@ -157,7 +158,7 @@ def FeatureSearch(train_X, train_y,test_X,test_y, max_n,min_n, step_n,max_iter, 
     for n in num_features:
         if v1:
             print(f"Searching for {n} set of features...")
-        best_metric, best_features = customFeatureElimination(train_X,train_y,
+        best_metric, best_features = customFeatureElimination(estimator,train_X,train_y,
                                                     test_X,test_y,
                                                     n,max_iter=max_iter,delta=delta,verbose=v2)
         metrics.append(best_metric)
