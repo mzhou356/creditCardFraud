@@ -1,14 +1,13 @@
 import matplotlib.pyplot as plt 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import confusion_matrix, classification_report, roc_curve, roc_auc_score, average_precision_score
-from sklearn.metrics import make_scorer, f1_score, precision_score,recall_score,confusion_matrix,precision_recall_curve
-from sklearn.model_selection import train_test_split, GridSearchCV, KFold
-from xgboost import XGBClassifier
+import xgboost
+from sklearn.metrics import confusion_matrix, classification_report, average_precision_score
+from sklearn.metrics import make_scorer, f1_score, precision_score,recall_score,precision_recall_curve
+from sklearn.model_selection import train_test_split, GridSearchCV
+plt.style.use('bmh')
 
 
-# define custom scores 
-# multiple y_true and y_pred with -1 in confusion matrix to create the correct orientation for confusion matrix 
 def make_custom_score(AddCustomScore = False, **kwargs):
     """
     This function makes custom score for sklearn gridSearchCV and other evaluators 
@@ -44,38 +43,12 @@ def plot_pr_re(label, score):
     
     Returns: precsion recall curve
     """
+    plt.figure(figsize=(6,6))
     precision, recall, threshold = precision_recall_curve(label,score)
     plt.plot(recall,precision)
     plt.ylabel("precision")
     plt.xlabel("recall")
     plt.show()
-
-def makeCustomSplits(training, label, n,seed,ratio):
-    """
-    This function makes custom train test splits for gridsearch or randomsearchCV for sklearn 
-    
-    args: 
-    training: pandas df, contains training data 
-    label: a string, colname for the Class label 
-    n: an integer, how many cross fold splits 
-    seed: an integer for random splitting 
-    ratio: anomaly class prevalence level 
-    
-    returns: 
-    generator that returns custom (train,test) for CV search in sklearn
-    X_train as numpy array 
-    y_train as numpy array
-    """
-    normX,fraudX = training[training[label]==0].drop(label,axis=1).values,\
-                   training[training[label]==1].drop(label,axis=1).values
-    normXSplits = KFold(n_splits=n,shuffle=True,random_state=seed).split(normX)
-    X_train = np.concatenate([normX,fraudX],axis=0)
-    nX,fX = normX.shape[0],fraudX.shape[0]
-    y_train = np.concatenate([np.ones(nX),np.ones(fX)*-1],axis=0)
-    # set similar prevalence for testing 
-    fTest_ind = np.random.choice(np.arange(nX,fX+nX), size = int((nX//n+fX)*ratio), replace=False)
-    cvSplits = ((train,np.concatenate([test,fTest_ind],axis=0)) for train, test in normXSplits)
-    return cvSplits,X_train,y_train
 
 def CVResultsOutput(CVresults, scorenames):
     """
@@ -119,11 +92,12 @@ def plot_relationship(norm_data = None, fraud_data = None, df=None, label=None, 
     plt.xlabel(f"{feature_name}")
     plt.show()
     
-def customFeatureElimination(train_X,train_y,test_X,test_y,n,max_iter,delta,verbose = True):
+def customFeatureElimination(estimator,train_X,train_y,test_X,test_y,n,max_iter,delta,verbose = True):
     """
     This function uses np.random to randomly remove n num of features until the score 
     no longer improve by a threshold. 
     
+    estimator: xgboost model 
     train_X: training features, a pandas dataframe. 
     train_y: label for train, pandas Series or array
     test_X: test features, a pandas dataframe
@@ -132,15 +106,17 @@ def customFeatureElimination(train_X,train_y,test_X,test_y,n,max_iter,delta,verb
     max_iter: maximum num of trials 
     verbose: show progress 
     delta: early stop if not improve after delta iterations 
+    
+    returns best metric as a float and a set of features as a list 
     """
     best_metric = 0.0;  # use precision recall score 
     features = [];
     best_iter = max_iter
     while max_iter > 0:
         max_iter -=1
-        selected = train_X.sample(n=n,axis=1)
+        selected = train_X.sample(n=n,axis=1,replace=False)
         current_features = selected.columns 
-        model = XGBClassifier(n_estimators=50, eta = 0.25, max_depth=5).fit(selected, train_y, eval_metric="aucpr")
+        model = estimator.fit(selected, train_y, eval_metric="aucpr")
         test = test_X[current_features]
         current_metric = precision_score(test_y,model.predict(test))
         if current_metric > best_metric:
@@ -156,21 +132,42 @@ def customFeatureElimination(train_X,train_y,test_X,test_y,n,max_iter,delta,verb
             break
     return best_metric, features
 
-def plot_roc(label, neg_log):
+def FeatureSearch(estimator,train_X, train_y,test_X,test_y, max_n,min_n, step_n,max_iter, delta, v1=False,v2=False):
     """
-    This function plots the receiver operator curve. 
+    This function uses customFeatureElimination to search a set of features from max_n,min_n with stepsize of step_n.
     
     Args:
-    label:y label for test set 
-    neg_log: - reconstruction_log_prob (this is the term we will use as pred prob score)
+    estimator: xgboost model 
+    train_X: training features, a pandas dataframe. 
+    train_y: label for train, pandas Series or array
+    test_X: test features, a pandas dataframe
+    test_y: label for test, pandas Series or array
+    max_n: max num of features to keep
+    min_n: min num of features to keep 
+    step_n: what stepsize to go from max_n to min_n
+    max_iter: maximum num of trials 
+    v1: show progress for n count 
+    v2: show progress for customFeatureElimination
+    delta: early stop if not improve after delta iterations 
     
-    Returns: ROC curve with area under the curve shown as a label. 
+    Returns:
+    a pandas dataframe final result order by metrics column
     """
-    fpr, tpr, threshold = roc_curve(label,neg_log)
-    auc = roc_auc_score(label,neg_log)
-    plt.plot(fpr,tpr,label=f"auc={auc}")
-    plt.legend(loc="best")
-    plt.show()
+    metrics = []
+    features = []
+    num_features =np.arange(max_n,min_n+step_n,step_n)
+    for n in num_features:
+        if v1:
+            print(f"Searching for {n} set of features...")
+        best_metric, best_features = customFeatureElimination(estimator,train_X,train_y,
+                                                    test_X,test_y,
+                                                    n,max_iter=max_iter,delta=delta,verbose=v2)
+        metrics.append(best_metric)
+        features.append(best_features)
+    final_result = pd.DataFrame({"n_features":num_features,
+              "metrics":metrics,
+              "features":features})
+    return final_result.sort_values("metrics",ascending=False)
     
 def model_results(label,prob_score,threshold=None,ifprint=False):
     """
@@ -213,26 +210,17 @@ def train_test_dfs(train,dev,test,label,test_size,seed):
     data = pd.concat([train_df,dev_df,test])
     training, testing = train_test_split(data, test_size = test_size, random_state=seed)
     return training, testing
+
+def plot_importance(importance_type, booster):
+    """
+    This function plots feature importance by importance type using xgboost. 
     
+    Args:
+    importance_type: a string, "weight","gain","cover", see the xgboost documentation for more info. 
+    booster: trained xgboost model. 
     
-    
-# def log_scale_comparision(df,label,feature_name,show_original=False):
-#     """
-#     This function plots the feature space distribution between np.log scale and no log scale 
-    
-#     Args:
-#     df: pandas dataframe, the dataframe that contains the dataset. 
-#     label: a type string, colname of the label 
-#     feature_name: a type string, colname of the dataset.
-    
-#     Returns:
-#     A plot that shows 2 distribution maps, blue is for log and orange is not for log 
-#     """
-#     # make sure feature_name is type string 
-#     assert type(feature_name) == str and type(label)==str, "label and feature_name need to be type str"
-#     plt.hist(np.log(df[df[label]==0][feature_name]+0.00000000001), label='logscale',color = "blue",alpha = 1,log=show_original)
-#     if show_original:
-#         plt.hist(df[df[label]==0][feature_name],label="noscale",color='orange',alpha = 0.3,log=True)
-#     plt.legend()
-#     plt.title(feature_name)
-#     plt.show()
+    plots the importance horizontal barplot 
+    """
+    plt.rcParams["figure.figsize"]=(12,8)
+    xgboost.plot_importance(booster, importance_type=importance_type)
+    plt.show()
