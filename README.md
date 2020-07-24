@@ -1,6 +1,10 @@
 # creditCardFraud
 * Testing various methods for rare event classification
 
+### UMAP feature visualization:
+* Notebook, [Link](https://github.com/mzhou356/creditCardFraud/blob/master/Feature_Visualization/notebooks/UMAP_visualization.ipynb
+)
+
 ### Try out various methods for anomaly detection:  
 * Autoencoder 
 * Variational Autoencoder with Variational probability
