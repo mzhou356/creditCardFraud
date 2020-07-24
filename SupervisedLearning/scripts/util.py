@@ -106,8 +106,8 @@ def plot_umap(embed,title,target):
     cdict = {0:"yellow",1:"purple"}
     n_ind = np.where(target==0)
     f_ind = np.where(target==1)
-    plt.scatter(embed.T[0,n_ind],embed.T[1,n_ind],s=1,c=cdict[0],label="normal",cmap="viridis")
-    plt.scatter(embed.T[0,f_ind],embed.T[1,f_ind],s=3,c=cdict[1],label="fraud",cmap="viridis")
+    plt.scatter(embed[n_ind,0],embed[n_ind,1],s=1,c=cdict[0],label="normal",cmap="viridis")
+    plt.scatter(embed[f_ind,0],embed[f_ind,1],s=3,c=cdict[1],label="fraud",cmap="viridis")
     plt.title(title)
     plt.legend(fontsize=12,markerscale=3)
     plt.xlabel("$x_0$")
