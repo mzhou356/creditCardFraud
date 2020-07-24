@@ -92,6 +92,28 @@ def plot_relationship(norm_data = None, fraud_data = None, df=None, label=None, 
     plt.xlabel(f"{feature_name}")
     plt.show()
     
+def plot_umap(embed,title,target):
+    """
+    This function plots umap 2D embed.
+    
+    embed: umap embed, 2D 
+    title: title for the graph 
+    target: the classification label 
+    
+    plots a scatter plot of component 1 and component 2
+    """
+    plt.figure(figsize=(12,7),dpi=150)
+    cdict = {0:"yellow",1:"purple"}
+    n_ind = np.where(target==0)
+    f_ind = np.where(target==1)
+    plt.scatter(embed[n_ind,0],embed[n_ind,1],s=1,c=cdict[0],label="normal",cmap="viridis")
+    plt.scatter(embed[f_ind,0],embed[f_ind,1],s=3,c=cdict[1],label="fraud",cmap="viridis")
+    plt.title(title)
+    plt.legend(fontsize=12,markerscale=3)
+    plt.xlabel("$x_0$")
+    plt.ylabel("$x_1$")
+    plt.show()
+    
 def customFeatureElimination(estimator,train_X,train_y,test_X,test_y,n,max_iter,delta,verbose = True):
     """
     This function uses np.random to randomly remove n num of features until the score 
