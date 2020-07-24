@@ -64,5 +64,40 @@ def plot_umap(embed,label,title):
     plt.ylabel("component 2")
     plt.legend(fontsize=16, markerscale=5)
     plt.show()
+    
+def feature_importance(model,X):
+    """
+    This function creates feature importance dataframe. 
+    
+    Arg:
+    model: tree model 
+    X: features, a pandas dataframe
+    
+    Returns:
+    df: pandas dataframe for feature importance ranked by importance score 
+    
+    """
+    importances = pd.DataFrame({"importance":model.feature_importances_,
+                           "feature_name":X.columns})
+    return importances.sort_values("importance",ascending=False)
 
- 
+def map_analyses(embed,x01,x02,y01,y02,label,title,data,features, c):
+    """
+    This function zooms in on umap embed to look at features
+    
+    Args:
+    x01,x02,y01,y02: coordinate boundariesfor clusters 
+    label: label for fraud and normal, a string
+    title: title for the boxplot
+    data: umap df
+    features: features columns to look at 
+    c: int, 0 for normal, 1 for theft
+    
+    plots a boxplot of all features for that cluster 
+    """
+    cluster = data[label==c][(embed[label==c,0]>=x01)&(embed[label==c,0]<=x02)&
+                 (embed[label==c,1]>=y01)&(embed[label==c,1]<=y02)][features]
+    plt.figure(figsize=(8,8))
+    cluster.boxplot(column=features)
+    plt.title(title)
+    plt.show()
