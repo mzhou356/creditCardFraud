@@ -21,13 +21,12 @@ def set_gpu_limit(n):
     tf.config.experimental.set_virtual_device_configuration(gpus[0],
     [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1024*n)]) 
 
-def make_tensor_dataset(dfs,buffer_size,batch_size,test_size=None,seed=None, needsplit = False):
+def make_tensor_dataset(dfs,batch_size,test_size=None,seed=None, needsplit = False):
     """
     This function generates tensorflow train and test dataset for NN.
     
     args:
     dfs: a list of pandas dataframes, used for training and testing.
-    buffer_size: an integer for each shuffle 
     batch_size: training batch size for each shuffle 
     test_size: a float, percentage of the df for testing during fitting if needsplit is True
     seed: an integer for random shuffling during train test split if needsplit is True 
@@ -41,9 +40,9 @@ def make_tensor_dataset(dfs,buffer_size,batch_size,test_size=None,seed=None, nee
         train, test = dfs
     train_set, dev_set = train.values, test.values 
     train_data = tf.data.Dataset.from_tensor_slices((train_set,
-                 train_set)).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE).shuffle(buffer_size)
+                 train_set)).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE).shuffle(train_set.shape[0])
     dev_data = tf.data.Dataset.from_tensor_slices((dev_set,
-                 dev_set)).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE).shuffle(buffer_size)
+                 dev_set)).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE).shuffle(dev_set.shape[0])
     return train_data, dev_data 
 
 def dense_layers(sizes,l1 = 10e-5):
