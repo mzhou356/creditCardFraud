@@ -7,7 +7,7 @@
 
 ### Try out various methods for anomaly detection:  
 * Autoencoder, [notebook link](https://github.com/mzhou356/creditCardFraud/blob/master/AnomalyDetection/notebooks/AutoEncoder.ipynb)
-* Variational Autoencoder with Variational probability
+* Variational Autoencoder with Variational probability, [notebook link](https://github.com/mzhou356/creditCardFraud/blob/master/AnomalyDetection/notebooks/VariationalAutoEncoder.ipynb)
 * Isolation forest
 * OneClass SVM
 
