@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import confusion_matrix, classification_report, roc_curve, roc_auc_score
+from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import precision_recall_curve,average_precision_score
 from sklearn.metrics import make_scorer, f1_score, precision_score,recall_score,confusion_matrix
 from sklearn.model_selection import train_test_split, GridSearchCV, KFold
 import tensorflow_probability as tfp
@@ -114,23 +115,26 @@ def plot_relationship(norm_data = None, fraud_data = None, df=None, label=None, 
     plt.xlabel(f"{feature_name}")
     plt.show()
     
-
-def plot_roc(label, neg_log):
+def plot_pr_re(label, score):
     """
-    This function plots the receiver operator curve. 
+    This function plots the precision recall curve.
     
     Args:
     label:y label for test set 
-    neg_log: - reconstruction_log_prob (this is the term we will use as pred prob score)
+    score: prob score, for VAE:- reconstruction_log_prob (
+           this is the term we will use as pred prob score)
     
-    Returns: ROC curve with area under the curve shown as a label. 
+    Returns: precsion recall curve
     """
-    fpr, tpr, threshold = roc_curve(label,neg_log)
-    auc = roc_auc_score(label,neg_log)
-    plt.plot(fpr,tpr,label=f"auc={auc}")
+    plt.figure(figsize=(6,6))
+    precision, recall, threshold = precision_recall_curve(label,score)
+    auc = average_precision_score(label,score)
+    plt.plot(recall,precision,label=f"auc={auc}")
+    plt.ylabel("precision")
+    plt.xlabel("recall")
     plt.legend(loc="best")
     plt.show()
-    
+
 def model_results(label,prob_score,threshold=None,ifprint=False):
     """
     This function returns confusion matrix and classification report for holdout set. 
@@ -173,26 +177,3 @@ def train_test_dfs(train,dev,test,label,test_size,seed):
     norm_data, training_data = training[training[label]==0], training
     norm_data = norm_data.drop(label, axis=1)
     return training_data,norm_data,test_data,test_y
-    
-    
-    
-# def log_scale_comparision(df,label,feature_name,show_original=False):
-#     """
-#     This function plots the feature space distribution between np.log scale and no log scale 
-    
-#     Args:
-#     df: pandas dataframe, the dataframe that contains the dataset. 
-#     label: a type string, colname of the label 
-#     feature_name: a type string, colname of the dataset.
-    
-#     Returns:
-#     A plot that shows 2 distribution maps, blue is for log and orange is not for log 
-#     """
-#     # make sure feature_name is type string 
-#     assert type(feature_name) == str and type(label)==str, "label and feature_name need to be type str"
-#     plt.hist(np.log(df[df[label]==0][feature_name]+0.00000000001), label='logscale',color = "blue",alpha = 1,log=show_original)
-#     if show_original:
-#         plt.hist(df[df[label]==0][feature_name],label="noscale",color='orange',alpha = 0.3,log=True)
-#     plt.legend()
-#     plt.title(feature_name)
-#     plt.show()
