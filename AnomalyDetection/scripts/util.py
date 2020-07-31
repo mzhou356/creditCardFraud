@@ -5,13 +5,6 @@ from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.metrics import precision_recall_curve,average_precision_score
 from sklearn.metrics import make_scorer, f1_score, precision_score,recall_score,confusion_matrix
 from sklearn.model_selection import train_test_split, GridSearchCV, KFold
-import tensorflow_probability as tfp
-import tensorflow.compat.v2 as tf
-
-tfk = tf.keras
-tfkl=tf.keras.layers
-tfpl= tfp.layers         # layers for tensor flow probability 
-tfd = tfp.distributions
 
 # define custom scores 
 # multiple y_true and y_pred with -1 in confusion matrix to create the correct orientation for confusion matrix 
