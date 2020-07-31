@@ -140,7 +140,7 @@ def model_results(label,prob_score,threshold=None,ifprint=False):
     Returns: confusion matrix and classification report for the specified neg log threshold.
     """
     results = pd.DataFrame({"label":label,"anomaly_prob":prob_score})
-    if ifprint and threshold:
+    if ifprint:
         results["pred_class"]=results.anomaly_prob.apply(lambda x: 1 if x>=threshold else 0)
         print(confusion_matrix(results.label,results.pred_class))
         print(classification_report(results.label, results.pred_class))
