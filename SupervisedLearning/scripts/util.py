@@ -114,11 +114,12 @@ def plot_umap(embed,title,target):
     plt.ylabel("$x_1$")
     plt.show()
     
-def customFeatureElimination(estimator,train_X,train_y,test_X,test_y,n,max_iter,delta,verbose = True):
+def customFeatureElimination(default_score, estimator,train_X,train_y,test_X,test_y,n,max_iter,delta,verbose = True):
     """
     This function uses np.random to randomly remove n num of features until the score 
     no longer improve by a threshold. 
     
+    default_score: score from default model 
     estimator: xgboost model 
     train_X: training features, a pandas dataframe. 
     train_y: label for train, pandas Series or array
@@ -131,7 +132,7 @@ def customFeatureElimination(estimator,train_X,train_y,test_X,test_y,n,max_iter,
     
     returns best metric as a float and a set of features as a list 
     """
-    best_metric = 0.0;  # use precision recall score 
+    best_metric = default_score;  # use precision recall score 
     features = [];
     best_iter = max_iter
     while max_iter > 0:
@@ -140,7 +141,7 @@ def customFeatureElimination(estimator,train_X,train_y,test_X,test_y,n,max_iter,
         current_features = selected.columns 
         model = estimator.fit(selected, train_y, eval_metric="aucpr")
         test = test_X[current_features]
-        current_metric = precision_score(test_y,model.predict(test))
+        current_metric = average_precision_score(test_y,model.predict_proba(test)[:,1])
         if current_metric > best_metric:
             features = current_features
             best_metric = current_metric 
@@ -154,7 +155,7 @@ def customFeatureElimination(estimator,train_X,train_y,test_X,test_y,n,max_iter,
             break
     return best_metric, features
 
-def FeatureSearch(estimator,train_X, train_y,test_X,test_y, max_n,min_n, step_n,max_iter, delta, v1=False,v2=False):
+def FeatureSearch(default_score,estimator,train_X, train_y,test_X,test_y, max_n,min_n, step_n,max_iter, delta, v1=False,v2=False):
     """
     This function uses customFeatureElimination to search a set of features from max_n,min_n with stepsize of step_n.
     
@@ -181,7 +182,7 @@ def FeatureSearch(estimator,train_X, train_y,test_X,test_y, max_n,min_n, step_n,
     for n in num_features:
         if v1:
             print(f"Searching for {n} set of features...")
-        best_metric, best_features = customFeatureElimination(estimator,train_X,train_y,
+        best_metric, best_features = customFeatureElimination(default_score, estimator,train_X,train_y,
                                                     test_X,test_y,
                                                     n,max_iter=max_iter,delta=delta,verbose=v2)
         metrics.append(best_metric)
