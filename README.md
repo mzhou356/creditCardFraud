@@ -29,4 +29,4 @@
 
 ### Summary:
   * Supervised machine learning methods performed better than unsupesrvised anomaly detection methods. 
-  * Among supervised machine learning methods, Xgboost with randommized feature elimination tend to perform the best although supervised NN would perform better with more data. 
+  * Among supervised machine learning methods, supervised NN performed the best but XGBoost is very close. More data would improve NN performance.
